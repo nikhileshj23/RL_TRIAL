@@ -11,13 +11,17 @@ SCREEN_HEIGHT = 512
 GROUND_Y = 400
 FPS = 60
 BASE_SPEED = 2
+PIPE_SPEED = 3
 GRAVITY = 0.5
-JUMP_IMPULSE = -8
+JUMP_IMPULSE = -6
 ROT_UP = 10
 ROT_DOWN = -90
 ROT_SMOOTH = 0.15
 VEL_UP = -2
 VEL_DOWN = 2.5
+FLAP_FREQUENCY = 5
+PIPE_LENGTH = 320
+PIPE_GAP = 100
 
 #codes to get a specified image or sound
 def load_image(name,scale = 1):
@@ -53,8 +57,9 @@ def main():
     screen = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
     pg.display.set_caption("Flappy Bird")
 
-    #initialising clock
+    #initialising clock and frame counter
     clock = pg.time.Clock()
+    frame_counter = 0
 
     #loading the images of all necessary sprites
     background, bg_rect = load_image("flappy-bird-assets-master/sprites/background-night.png")
@@ -63,10 +68,22 @@ def main():
     base, base_rect = load_image("flappy-bird-assets-master/sprites/base.png")
     base_rect.topleft = (base_offset,GROUND_Y)
 
-    red_bird, red_bird_rect = load_image("flappy-bird-assets-master/sprites/redbird-midflap.png")
-    BIRD_HEIGHT = red_bird_rect.height
-    red_bird_rect.topleft = (60,200)
-    bird_y = float(red_bird_rect.y)
+    pipe, pipe_rect = load_image("flappy-bird-assets-master/sprites/pipe-green.png")
+    inverted_pipe = pg.transform.flip(pipe, False, True)
+    inverted_pipe_rect = inverted_pipe.get_rect(center = pipe_rect.center)
+    gap_y = 250
+    pipe_rect.topleft = (SCREEN_WIDTH - 60, gap_y + PIPE_GAP // 2)
+    inverted_pipe_rect.topleft = (SCREEN_WIDTH - 60, gap_y - PIPE_GAP // 2 - PIPE_LENGTH)
+
+    red_bird_midflap, red_bird_midflap_rect = load_image("flappy-bird-assets-master/sprites/redbird-midflap.png")
+    red_bird_upflap, red_bird_upflap_rect = load_image("flappy-bird-assets-master/sprites/redbird-upflap.png")
+    red_bird_downflap, red_bird_downflap_rect = load_image("flappy-bird-assets-master/sprites/redbird-downflap.png")
+    
+    BIRD_HEIGHT = red_bird_midflap_rect.height
+    current_bird, current_bird_rect = red_bird_midflap, red_bird_midflap_rect
+
+    current_bird_rect.topleft = (60,200)
+    bird_y = float(current_bird_rect.y)
     running = True
 
     bird_downward_velocity = GRAVITY
@@ -86,22 +103,41 @@ def main():
                     bird_downward_velocity = JUMP_IMPULSE
                     bird_rotation = ROT_UP
 
-        
+        #flapping animation
+        if(frame_counter % FLAP_FREQUENCY == 0):
+            curr_frame_index = frame_counter / FLAP_FREQUENCY
+            curr_x, curr_y = current_bird_rect.topleft
+            if curr_frame_index % 2 == 0:
+                #should change the current bird to midflap
+                current_bird, current_bird_rect = red_bird_midflap, red_bird_midflap_rect
+            elif curr_frame_index % 4 == 1:
+                #should change the current bird to downflap
+                current_bird, current_bird_rect = red_bird_downflap, red_bird_downflap_rect
+            elif curr_frame_index % 4 == 3:
+                #should change the current bird to upflap
+                current_bird, current_bird_rect = red_bird_upflap, red_bird_upflap_rect
+
+            current_bird_rect.topleft = (curr_x, curr_y)
+       
         #base scrolling
         base_offset += BASE_SPEED
         if(base_offset >= 48):
             base_offset = 0
         base_rect.topleft = (-base_offset,GROUND_Y)
 
+        #pipes scrolling
+        pipe_rect.x -= PIPE_SPEED
+        inverted_pipe_rect.x -= PIPE_SPEED
+
         #bird gravity
         bird_downward_velocity += GRAVITY
         bird_y += bird_downward_velocity
-        red_bird_rect.y = int(bird_y)
+        current_bird_rect.y = int(bird_y)
 
         #ground collision
         if bird_y + BIRD_HEIGHT >= GROUND_Y:
             bird_y = GROUND_Y - BIRD_HEIGHT
-            red_bird_rect.y = int(bird_y)
+            current_bird_rect.y = int(bird_y)
             bird_downward_velocity = 0
             bird_rotation = -10
 
@@ -115,15 +151,18 @@ def main():
 
         bird_rotation += (target_rotation - bird_rotation) * ROT_SMOOTH
 
-        rotated_bird = pg.transform.rotate(red_bird, bird_rotation)
-        rotated_bird_rect = rotated_bird.get_rect(center = red_bird_rect.center)
+        rotated_bird = pg.transform.rotate(current_bird, bird_rotation)
+        rotated_bird_rect = rotated_bird.get_rect(center = current_bird_rect.center)
 
-        #clock tick
+        #clock tick and increment frame counter
         clock.tick(FPS)
+        frame_counter += 1
 
         #drawing and projecting onto the screen
         screen.blit(background, bg_rect)
         screen.blit(rotated_bird,rotated_bird_rect)
+        screen.blit(pipe,pipe_rect)
+        screen.blit(inverted_pipe,inverted_pipe_rect)
         screen.blit(base,base_rect)
         pg.display.flip()
 
