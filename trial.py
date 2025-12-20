@@ -1,5 +1,6 @@
 #importing necessary modules
 import os
+import random
 import pygame as pg
 
 #main directory path of this project
@@ -21,7 +22,9 @@ VEL_UP = -2
 VEL_DOWN = 2.5
 FLAP_FREQUENCY = 5
 PIPE_LENGTH = 320
-PIPE_GAP = 100
+PIPE_WIDTH = 52
+PIPE_GAP = 150
+PIPE_SPACING = 150
 
 #codes to get a specified image or sound
 def load_image(name,scale = 1):
@@ -68,12 +71,32 @@ def main():
     base, base_rect = load_image("flappy-bird-assets-master/sprites/base.png")
     base_rect.topleft = (base_offset,GROUND_Y)
 
-    pipe, pipe_rect = load_image("flappy-bird-assets-master/sprites/pipe-green.png")
-    inverted_pipe = pg.transform.flip(pipe, False, True)
-    inverted_pipe_rect = inverted_pipe.get_rect(center = pipe_rect.center)
-    gap_y = 250
-    pipe_rect.topleft = (SCREEN_WIDTH - 60, gap_y + PIPE_GAP // 2)
-    inverted_pipe_rect.topleft = (SCREEN_WIDTH - 60, gap_y - PIPE_GAP // 2 - PIPE_LENGTH)
+    #PIPE PAIR 1
+    pipe1, pipe1_rect = load_image("flappy-bird-assets-master/sprites/pipe-green.png")
+    inverted_pipe1 = pg.transform.flip(pipe1, False, True)
+    inverted_pipe1_rect = inverted_pipe1.get_rect(center = pipe1_rect.center)
+    gap1_y = random.randint(90,300)
+    pipe1_x = SCREEN_WIDTH + PIPE_SPACING
+    pipe1_rect.topleft = (pipe1_x, gap1_y + PIPE_GAP // 2)
+    inverted_pipe1_rect.topleft = (pipe1_x, gap1_y - PIPE_GAP // 2 - PIPE_LENGTH)
+
+    #PIPE PAIR 2
+    pipe2, pipe2_rect = load_image("flappy-bird-assets-master/sprites/pipe-green.png")
+    inverted_pipe2 = pg.transform.flip(pipe2, False, True)
+    inverted_pipe2_rect = inverted_pipe2.get_rect(center = pipe2_rect.center)
+    gap2_y = random.randint(90,300)
+    pipe2_x = SCREEN_WIDTH +  2 * PIPE_SPACING
+    pipe2_rect.topleft = (pipe2_x, gap2_y + PIPE_GAP // 2)
+    inverted_pipe2_rect.topleft = (pipe2_x, gap2_y - PIPE_GAP // 2 - PIPE_LENGTH)
+
+    #PIPE PAIR 3
+    pipe3, pipe3_rect = load_image("flappy-bird-assets-master/sprites/pipe-green.png")
+    inverted_pipe3 = pg.transform.flip(pipe3, False, True)
+    inverted_pipe3_rect = inverted_pipe3.get_rect(center = pipe3_rect.center)
+    gap3_y = random.randint(90,300)
+    pipe3_x = SCREEN_WIDTH + 3 * PIPE_SPACING
+    pipe3_rect.topleft = (pipe3_x, gap3_y + PIPE_GAP // 2)
+    inverted_pipe3_rect.topleft = (pipe3_x, gap3_y - PIPE_GAP // 2 - PIPE_LENGTH)
 
     red_bird_midflap, red_bird_midflap_rect = load_image("flappy-bird-assets-master/sprites/redbird-midflap.png")
     red_bird_upflap, red_bird_upflap_rect = load_image("flappy-bird-assets-master/sprites/redbird-upflap.png")
@@ -126,8 +149,38 @@ def main():
         base_rect.topleft = (-base_offset,GROUND_Y)
 
         #pipes scrolling
-        pipe_rect.x -= PIPE_SPEED
-        inverted_pipe_rect.x -= PIPE_SPEED
+        pipe1_x -= PIPE_SPEED
+        pipe1_rect.x = pipe1_x
+        inverted_pipe1_rect.x = pipe1_x
+
+        if(pipe1_rect.right  < 0):
+            max_x_cord_pipe = max(pipe2_rect.right, pipe3_rect.right)
+            pipe1_x = max_x_cord_pipe + PIPE_SPACING
+            gap1_y = random.randint(70,330)
+            pipe1_rect.topleft = (pipe1_x, gap1_y + PIPE_GAP // 2)
+            inverted_pipe1_rect.topleft = (pipe1_x, gap1_y - PIPE_GAP // 2 - PIPE_LENGTH)
+
+        pipe2_x -= PIPE_SPEED
+        pipe2_rect.x = pipe2_x
+        inverted_pipe2_rect.x = pipe2_x
+
+        if(pipe2_rect.right  < 0):
+            max_x_cord_pipe = max(pipe1_rect.right, pipe3_rect.right)
+            pipe2_x = max_x_cord_pipe + PIPE_SPACING
+            gap2_y = random.randint(70,330)
+            pipe2_rect.topleft = (pipe2_x, gap2_y + PIPE_GAP // 2)
+            inverted_pipe2_rect.topleft = (pipe2_x, gap2_y - PIPE_GAP // 2 - PIPE_LENGTH)
+
+        pipe3_x -= PIPE_SPEED
+        pipe3_rect.x = pipe3_x
+        inverted_pipe3_rect.x = pipe3_x
+
+        if(pipe3_rect.right  < 0):
+            max_x_cord_pipe = max(pipe1_rect.right, pipe2_rect.right)
+            pipe3_x = max_x_cord_pipe + PIPE_SPACING
+            gap3_y = random.randint(70,330)
+            pipe3_rect.topleft = (pipe3_x, gap3_y + PIPE_GAP // 2)
+            inverted_pipe3_rect.topleft = (pipe3_x, gap3_y - PIPE_GAP // 2 - PIPE_LENGTH)
 
         #bird gravity
         bird_downward_velocity += GRAVITY
@@ -158,11 +211,18 @@ def main():
         clock.tick(FPS)
         frame_counter += 1
 
+        if current_bird_rect.colliderect(pipe1_rect) or current_bird_rect.colliderect(pipe2_rect) or current_bird_rect.colliderect(pipe3_rect):
+            running = False
+
         #drawing and projecting onto the screen
         screen.blit(background, bg_rect)
         screen.blit(rotated_bird,rotated_bird_rect)
-        screen.blit(pipe,pipe_rect)
-        screen.blit(inverted_pipe,inverted_pipe_rect)
+        screen.blit(pipe1,pipe1_rect)
+        screen.blit(inverted_pipe1,inverted_pipe1_rect)
+        screen.blit(pipe2,pipe2_rect)
+        screen.blit(inverted_pipe2,inverted_pipe2_rect)
+        screen.blit(pipe3,pipe3_rect)
+        screen.blit(inverted_pipe3,inverted_pipe3_rect)
         screen.blit(base,base_rect)
         pg.display.flip()
 
