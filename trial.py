@@ -25,6 +25,7 @@ PIPE_LENGTH = 320
 PIPE_WIDTH = 52
 PIPE_GAP = 150
 PIPE_SPACING = 150
+BIRD_HEIGHT = 24
 
 #codes to get a specified image or sound
 def load_image(name,scale = 1):
@@ -51,31 +52,35 @@ def load_sound(name):
 
     return sound
 
-#main loop of the game
 def main():
-
+    #initialising necessary libraries
     pg.init()
     pg.font.init()
-
-    score_font = pg.font.SysFont(None, 40)
 
     #setting the screen size and the caption
     screen = pg.display.set_mode((SCREEN_WIDTH,SCREEN_HEIGHT))
     pg.display.set_caption("Flappy Bird")
 
-    #initialising clock and frame counter
+    #initialising necessary variables
     clock = pg.time.Clock()
     frame_counter = 0
     game_score = 0
+    running = True
+    bird_alive = True
+    message_screen_active = True
 
     #loading the images of all necessary sprites
-    background, bg_rect = load_image("flappy-bird-assets-master/sprites/background-night.png")
+    background, bg_rect = load_image("flappy-bird-assets-master/sprites/background-day.png")
     
     base_offset = 0
     base, base_rect = load_image("flappy-bird-assets-master/sprites/base.png")
     base_rect.topleft = (base_offset,GROUND_Y)
 
     game_over, game_over_rect = load_image("flappy-bird-assets-master/sprites/gameover.png")
+    game_over_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
+
+    message, message_rect = load_image("flappy-bird-assets-master/sprites/message.png")
+    message_rect.center = (SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2)
 
     #PIPE PAIR 1
     pipe1, pipe1_rect = load_image("flappy-bird-assets-master/sprites/pipe-green.png")
@@ -92,7 +97,7 @@ def main():
     inverted_pipe2 = pg.transform.flip(pipe2, False, True)
     inverted_pipe2_rect = inverted_pipe2.get_rect(center = pipe2_rect.center)
     gap2_y = random.randint(90,300)
-    pipe2_x = SCREEN_WIDTH +  2 * PIPE_SPACING
+    pipe2_x = SCREEN_WIDTH + 2 * PIPE_SPACING
     pipe2_rect.topleft = (pipe2_x, gap2_y + PIPE_GAP // 2)
     inverted_pipe2_rect.topleft = (pipe2_x, gap2_y - PIPE_GAP // 2 - PIPE_LENGTH)
     pipe2_scored = False
@@ -112,36 +117,44 @@ def main():
     red_bird_downflap, red_bird_downflap_rect = load_image("flappy-bird-assets-master/sprites/redbird-downflap.png")
     
     digits = []
-
     for i in range(10):
         img, _ = load_image(f"flappy-bird-assets-master/sprites/{i}.png")
         digits.append(img)
     
-    BIRD_HEIGHT = red_bird_midflap_rect.height
     current_bird, current_bird_rect = red_bird_midflap, red_bird_midflap_rect
-
     current_bird_rect.topleft = (60,200)
     bird_y = float(current_bird_rect.y)
-    running = True
-    bird_alive = True
-
     bird_downward_velocity = GRAVITY
     bird_rotation = -5
 
+    #main loop of the game
     while running:
-        if bird_alive:    
-            if pipe1_scored == False and current_bird_rect.left > pipe1_rect.right:
-                game_score += 1
-                pipe1_scored = True
-            
-            if pipe2_scored == False and current_bird_rect.left > pipe2_rect.right:
-                game_score += 1
-                pipe2_scored = True
-            
-            if pipe3_scored == False and current_bird_rect.left > pipe3_rect.right:
-                game_score += 1
-                pipe3_scored = True
-            
+        if message_screen_active:
+            #game hasn't started yet
+            for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    running = False
+
+                if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_ESCAPE:
+                        running = False
+
+                    if event.key == pg.K_SPACE:
+                        #when the user presses space key, we must start the game immediately
+                        message_screen_active = False
+
+            #base scrolling (purely for asthetic purposes)
+            base_offset += BASE_SPEED
+            if(base_offset >= 48):
+                base_offset = 0
+            base_rect.topleft = (-base_offset,GROUND_Y)
+
+            screen.blit(background, bg_rect)
+            screen.blit(message, message_rect)
+            screen.blit(base, base_rect)
+            pg.display.flip()
+
+        elif bird_alive:   
             #event
             for event in pg.event.get():
                 if event.type == pg.QUIT:
@@ -155,6 +168,19 @@ def main():
                         bird_downward_velocity = JUMP_IMPULSE
                         bird_rotation = ROT_UP
 
+            #updating score
+            if pipe1_scored == False and current_bird_rect.left > pipe1_rect.right:
+                game_score += 1
+                pipe1_scored = True
+            
+            if pipe2_scored == False and current_bird_rect.left > pipe2_rect.right:
+                game_score += 1
+                pipe2_scored = True
+            
+            if pipe3_scored == False and current_bird_rect.left > pipe3_rect.right:
+                game_score += 1
+                pipe3_scored = True
+            
             #flapping animation
             if(frame_counter % FLAP_FREQUENCY == 0):
                 curr_frame_index = frame_counter // FLAP_FREQUENCY
@@ -182,6 +208,7 @@ def main():
             pipe1_rect.x = pipe1_x
             inverted_pipe1_rect.x = pipe1_x
 
+            #resetting pipes when they reach the end
             if(pipe1_rect.right  < 0):
                 pipe1_scored = False
                 max_x_cord_pipe = max(pipe2_rect.right, pipe3_rect.right)
@@ -244,11 +271,13 @@ def main():
             clock.tick(FPS)
             frame_counter += 1
 
+            #checking bird collision with the pipes
             if (current_bird_rect.colliderect(pipe1_rect) or current_bird_rect.colliderect(pipe2_rect) or 
                 current_bird_rect.colliderect(pipe3_rect) or current_bird_rect.colliderect(inverted_pipe1_rect) or
                 current_bird_rect.colliderect(inverted_pipe2_rect) or current_bird_rect.colliderect(inverted_pipe3_rect)):
                 bird_alive = False
 
+            #presenting score on the screen
             score_str = str(game_score)
             score_width = 0
             for ch in score_str:
@@ -277,7 +306,13 @@ def main():
 
         else:
             for event in pg.event.get():
+                if event.type == pg.QUIT:
+                    running = False
+
                 if event.type == pg.KEYDOWN:
+                    if event.key == pg.K_ESCAPE:
+                        running = False
+
                     if event.key == pg.K_SPACE:
                         current_bird, current_bird_rect = red_bird_midflap, red_bird_midflap_rect
                         current_bird_rect.topleft = (60,200)
@@ -306,17 +341,34 @@ def main():
                         inverted_pipe3_rect.topleft = (pipe3_x, gap3_y - PIPE_GAP // 2 - PIPE_LENGTH)
                         pipe3_scored = False
 
+            #base scrolling
+            base_offset += BASE_SPEED
+            if(base_offset >= 48):
+                base_offset = 0
+            base_rect.topleft = (-base_offset,GROUND_Y)
+
+            score_str = str(game_score)
+            score_width = 0
+            for ch in score_str:
+                score_width += digits[int(ch)].get_width()
+
+            score_x = SCREEN_WIDTH // 2 - score_width // 2
+            score_y = 30
+
             screen.blit(background, bg_rect)
             screen.blit(game_over,game_over_rect)
+
+            for ch in score_str:
+                digit_img = digits[int(ch)]
+                screen.blit(digit_img,(score_x,score_y))
+                score_x += digit_img.get_width()
+
             screen.blit(base,base_rect)
             pg.display.flip()
 
             #clock tick and increment frame counter
             clock.tick(FPS)
             frame_counter += 1
-
-            # if frame_counter % 10 == 0:
-            #     running = False
 
     pg.quit()
 
